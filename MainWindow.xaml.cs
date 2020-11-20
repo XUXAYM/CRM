@@ -31,7 +31,7 @@ namespace GUI_DB
         public MainWindow()
         {
             InitializeComponent();
-            Loaded += new RoutedEventHandler(MainWindow_Loaded);
+            //Loaded += new RoutedEventHandler(MainWindow_Loaded);
             LoadGif.Visibility = Visibility.Collapsed;
         }
         String connectionDefault = "Server=localhost;Port=5432;User Id=admin;Password=12345;Database=management;";
@@ -52,11 +52,17 @@ namespace GUI_DB
                 {
                     InitLoad();
                 });
-                Tasks_DataGrid.ItemsSource = tasksList;
                 Clients_DataGrid.ItemsSource = clientsList;
                 Workers_DataGrid.ItemsSource = workersList;
                 var log = Login_Box.Text;
                 var pas = Password_Box.Password;
+                if(workersList.Where(w => w.Login == log.ToLower()).Count() == 0)
+                {
+                    LoginGrid.IsEnabled = true;
+                    LoadGif.Visibility = Visibility.Collapsed;
+                    MessageBox.Show("Неверный логин", "Ошибка авторизации", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
                 await Task.Run(() =>
                 {
                     LogIn(log, pas);
@@ -64,6 +70,8 @@ namespace GUI_DB
                 Profile_Name_Label.Content = currentUser.Name;
                 Profile_Position_Label.Content = currentUser.Position;
                 Profile_Role_Label.Content = currentUser.Role;
+                tasksList = currentUser.Role == "Работник" ? new BindingList<TaskModel>(tasksList.Where(t => t.Slave.Id == currentUser.Id).ToList())  : tasksList;
+                Tasks_DataGrid.ItemsSource = tasksList;
                 AddTaskClient_ComboBox.ItemsSource = clientsList;
                 AddTaskSlave_ComboBox.ItemsSource = workersList;
                 WaitToConnect();
@@ -75,22 +83,20 @@ namespace GUI_DB
         {
             npgSqlConnection = new NpgsqlConnection(connectionDefault);
             npgSqlConnection.Open();
-            Thread.Sleep(100);
             workersList = LoadWorkersFromDB();
-            Thread.Sleep(100);
             clientsList = LoadClientsFromDB();
-            Thread.Sleep(100);
             tasksList = LoadTasksFromDB();
             tasksList.ListChanged += TasksList_ListChanged;
+            clientsList.ListChanged += ClientsList_ListChanged;
         }
         private void LogIn(string login, string password)
         {
-            if (login == "admin")
+            if (login.ToLower() == "admin")
             {
                 currentUser = new WorkerModel() { Role = "Администратор", Id = -1 };
             }
             else
-                currentUser = workersList.Where(w => w.Login == login).First();
+                currentUser = workersList.Where(w => w.Login == login.ToLower()).First();
             if(npgSqlConnection.State == System.Data.ConnectionState.Open)
                 npgSqlConnection.Close();
             connectionString = $"Server=localhost;Port=5432;User Id={login.ToLower()};Password={password};Database=management;";
@@ -163,10 +169,11 @@ namespace GUI_DB
                 }
             }
             Thread.Sleep(50);
-            var roles = new List<string>();
+
             string log;
             foreach (WorkerModel worker in workers)
             {
+                var roles = new List<string>();
                 log = worker.Login;
                 NpgsqlCommand command = new NpgsqlCommand($"select rolname from pg_roles where pg_has_role('{log}', oid, 'member');", npgSqlConnection);
                 using (NpgsqlDataReader reader = command.ExecuteReader())
@@ -190,7 +197,7 @@ namespace GUI_DB
         }
         private BindingList<TaskModel> LoadTasksFromDB()
         {
-            NpgsqlCommand npgsqlCommand = new NpgsqlCommand("SELECT task_id, description, client_id, serial_number, creation_date, master_id, priority, slave_id, (extract(epoch from days_to_complete)/86400) as days_left FROM tasks;", npgSqlConnection);
+            NpgsqlCommand npgsqlCommand = new NpgsqlCommand("SELECT task_id, description, client_id, serial_number, creation_date, master_id, priority, completion_date, slave_id, (extract(epoch from days_to_complete)/86400) as days_left FROM tasks;", npgSqlConnection);
             BindingList<TaskModel> tasks = new BindingList<TaskModel>();
             using (NpgsqlDataReader reader = npgsqlCommand.ExecuteReader())
             {
@@ -208,8 +215,12 @@ namespace GUI_DB
                             DoUntilDate = Convert.ToDateTime(reader["creation_date"]).AddDays(Convert.ToDouble(reader["days_left"].ToString())),
                             Master = workersList.Where(w => w.Id == Convert.ToInt32(reader["master_id"].ToString())).First(),
                             Priority = reader["priority"].ToString(),
-                            Slave = workersList.Where(w => w.Id == Convert.ToInt32(reader["slave_id"].ToString())).First()
+                            Slave = workersList.Where(w => w.Id == Convert.ToInt32(reader["slave_id"].ToString())).First(),
                         };
+                        if (reader["completion_date"].ToString() == "")
+                            task.isCompleted = false;
+                        else
+                            task.isCompleted = true;
                         tasks.Add(task);
                     }
                 }
@@ -288,7 +299,7 @@ namespace GUI_DB
             string login = Reg_Login_Box.Text;
             string password = Reg_Password_Box.Password;
             int salary;
-            ComboBoxItem role = SelectRole_ComboBox.SelectedItem as ComboBoxItem;
+            var role = (ComboBoxItem)SelectRole_ComboBox.SelectedItem;
             if ((string)role.Tag == "worker")
                 salary = 40000;
             else
@@ -299,7 +310,6 @@ namespace GUI_DB
                 npgsqlCommand.ExecuteNonQuery();
                 npgSqlConnection.Close();
                 npgSqlConnection.Dispose();
-                bool op = true;
             });
             InitLoad();
             Tasks_DataGrid.ItemsSource = tasksList;
@@ -327,6 +337,7 @@ namespace GUI_DB
             Workers_DataGrid.Visibility = Visibility.Hidden;
             Clients_DataGrid.Visibility = Visibility.Hidden;
             AddTask_Grid.Visibility = Visibility.Visible;
+            AddClient_Grid.Visibility = Visibility.Collapsed;
             AddTaskClient_ComboBox.ItemsSource = clientsList;
             AddTaskSlave_ComboBox.ItemsSource = workersList;
             Tasks_DataGrid.ItemsSource = tasksList;
@@ -336,6 +347,7 @@ namespace GUI_DB
             Tasks_DataGrid.Visibility = Visibility.Hidden;
             Workers_DataGrid.Visibility = Visibility.Hidden;
             Clients_DataGrid.Visibility = Visibility.Visible;
+            AddClient_Grid.Visibility = Visibility.Visible;
             AddTask_Grid.Visibility = Visibility.Collapsed;
         }
         private void ListItem_Workers_Selected(object sender, RoutedEventArgs e)
@@ -344,15 +356,17 @@ namespace GUI_DB
             Workers_DataGrid.Visibility = Visibility.Visible;
             Clients_DataGrid.Visibility = Visibility.Hidden;
             AddTask_Grid.Visibility = Visibility.Collapsed;
+            AddClient_Grid.Visibility = Visibility.Collapsed;
         }
         private async void TasksList_ListChanged(object sender, ListChangedEventArgs e)
         {
-            TaskModel model = sender as TaskModel;
+            var model = sender as BindingList<TaskModel>;
             if (e.ListChangedType == ListChangedType.ItemAdded)
             {
-
+                Tasks_DataGrid.ItemsSource = tasksList;
             } else if (e.ListChangedType == ListChangedType.ItemChanged)
             {
+                var index = e.NewIndex;
                 LoadGif.Visibility = Visibility.Visible;
                 WorkSheet.IsEnabled = false;
                 await Task.Run(() =>
@@ -361,7 +375,7 @@ namespace GUI_DB
                     NpgsqlParameter param1 = new NpgsqlParameter("date", NpgsqlDbType.Timestamp);
                     param1.Value = DateTime.Now;
                     NpgsqlParameter param2 = new NpgsqlParameter("id", NpgsqlDbType.Integer);
-                    param2.Value = model.Id;
+                    param2.Value = model[index].Id;
                     npgsqlCommand.Parameters.Add(param1);
                     npgsqlCommand.Parameters.Add(param2);
                     npgsqlCommand.ExecuteNonQuery();
@@ -369,6 +383,76 @@ namespace GUI_DB
                 WorkSheet.IsEnabled = true;
                 LoadGif.Visibility = Visibility.Collapsed;
             }
+        }
+        private async void ClientsList_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            var model = sender as BindingList<ClientModel>;
+            var propetyName = e.PropertyDescriptor.Name;
+            if (e.ListChangedType == ListChangedType.ItemAdded)
+            {
+                Clients_DataGrid.ItemsSource = clientsList;
+            } else if (e.ListChangedType == ListChangedType.ItemChanged)
+            {
+                var index = e.NewIndex;
+                LoadGif.Visibility = Visibility.Visible;
+                WorkSheet.IsEnabled = false;
+                switch (propetyName)
+                {
+                    case "Phone":
+                        {
+                            await Task.Run(() =>
+                            {
+                                InsertClientData("phone_num", model[index].Phone, model[index].Id);
+                            });
+                            break;
+                        }
+                    case "Fax":
+                        {
+                            await Task.Run(() =>
+                            {
+                                InsertClientData("fax_num", model[index].Fax, model[index].Id);
+                            });
+                            break;
+                        }
+                    case "Email":
+                        {
+                            await Task.Run(() =>
+                            {
+                                InsertClientData("email", model[index].Email, model[index].Id);
+                            });
+                            break;
+                        }
+                    case "Address":
+                        {
+                            await Task.Run(() =>
+                            {
+                                InsertClientData("address", model[index].Address, model[index].Id);
+                            });
+                            break;
+                        }
+                    case "ContactName":
+                        {
+                            await Task.Run(() =>
+                            {
+                                InsertClientData("contact_name", model[index].ContactName, model[index].Id);
+                            });
+                            break;
+                        }
+                    default:
+                        {
+                            WorkSheet.IsEnabled = true;
+                            LoadGif.Visibility = Visibility.Collapsed;
+                            return;
+                        }
+                }
+                WorkSheet.IsEnabled = true;
+                LoadGif.Visibility = Visibility.Collapsed;
+            }
+        }
+        private void InsertClientData(string columnName, string value, int rowId)
+        {
+            NpgsqlCommand npgsqlCommand = new NpgsqlCommand($"UPDATE clients SET {columnName} = {value} WHERE client_id = {rowId}", npgSqlConnection);
+            npgsqlCommand.ExecuteNonQuery();
         }
         private async void AddTask_Button_Click(object sender, RoutedEventArgs e)
         {
@@ -418,62 +502,127 @@ namespace GUI_DB
                 NpgsqlCommand npgsqlCommand = new NpgsqlCommand($"INSERT INTO \"tasks\" (description, client_id, serial_number, creation_date, days_to_complete, master_id, priority, slave_id) VALUES('{description}', {chosenClient.Id}, {serial}, :date, :days, {currentUser.Id}, '{priority}', {chosenSlave.Id});", npgSqlConnection);
                 NpgsqlParameter param1 = new NpgsqlParameter("date", NpgsqlDbType.Date);
                 param1.Value = NpgsqlDate.Now;
-                NpgsqlParameter param2 = new NpgsqlParameter("serial_number", NpgsqlDbType.Integer);
-                param2.Value = serial;
                 NpgsqlTimeSpan timeSpan = NpgsqlTimeSpan.FromDays(days);
-
                 NpgsqlParameter param3 = new NpgsqlParameter("days", NpgsqlDbType.Interval);
                 param3.Value = timeSpan;
                 npgsqlCommand.Parameters.Add(param1);
-                //npgsqlCommand.Parameters.Add(param2);
                 npgsqlCommand.Parameters.Add(param3);
                 npgsqlCommand.ExecuteNonQuery();
             });
             tasksList = LoadTasksFromDB();
+            tasksList = currentUser.Role == "Работник" ? new BindingList<TaskModel>(tasksList.Where(t => t.Slave.Id == currentUser.Id).ToList()) : tasksList;
             Tasks_DataGrid.ItemsSource = tasksList;
             WorkSheet.IsEnabled = true;
             LoadGif.Visibility = Visibility.Collapsed;
+            ClearForm_Button_Click( 1 , new RoutedEventArgs());
         }
+
+        private void ClearForm_Button_Click(object sender, RoutedEventArgs e)
+        {
+            AddTaskDescription_TextBox.Text = "";
+            AddTaskDaysToComplete_TextBox.Text = "";
+            AddTaskSerial_TextBox.Text = "";
+            AddTaskClient_ComboBox.SelectedItem = null;
+            AddTaskPriority_ComboBox.SelectedItem = null;
+            AddTaskSlave_ComboBox.SelectedItem = null;
+        }
+        private async void AddClient_Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (AddClient_Name_TextBox.Text.Length == 0 || AddClient_Phone_TextBox.Text.Length == 0
+    || AddClient_Email_TextBox.Text.Length == 0 || AddClient_Address_TextBox.Text.Length == 0
+    || AddClient_ContactName_TextBox.Text.Length == 0) return;
+            long phone;
+            long fax;
+            string faxString = "";
+            if (AddClient_Fax_TextBox.Text.Length > 0)
+            {
+                if (!Int64.TryParse(AddClient_Phone_TextBox.Text, out fax))
+                {
+                    MessageBox.Show("Полe 'Факс' содержит неверное значение", "Ошибка формата данных", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                faxString = Convert.ToString(fax);
+            }
+            if (!Int64.TryParse(AddClient_Phone_TextBox.Text, out phone) || AddClient_Phone_TextBox.Text.Length != 11)
+            {
+                MessageBox.Show("Полe 'Телефон' содержит неверное значение", "Ошибка формата данных", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            if (!Regex.IsMatch(AddClient_ContactName_TextBox.Text, @"^[а-яА-Я ]+$"))
+            {
+                MessageBox.Show("Полe 'Контактное лицо' должно содержать только буквы", "Ошибка формата данных", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            LoadGif.Visibility = Visibility.Visible;
+            string name = AddClient_Name_TextBox.Text;
+            string email = AddClient_Email_TextBox.Text;
+            string address = AddClient_Address_TextBox.Text;
+            string contactName = AddClient_ContactName_TextBox.Text;
+
+            await Task.Run(() =>
+            {
+                NpgsqlCommand npgsqlCommand = new NpgsqlCommand($"insert into clients (name, phone_num, fax_num, address, email, contact_name) VALUES ('{name}','{phone}','{faxString}','{address}','{email}','{contactName}');", npgSqlConnection);
+                npgsqlCommand.ExecuteNonQuery();
+            });
+            clientsList = LoadClientsFromDB();
+            Clients_DataGrid.ItemsSource = clientsList;
+            WorkSheet.IsEnabled = true;
+            LoadGif.Visibility = Visibility.Collapsed;
+            ClearClient_Button_Click(1, new RoutedEventArgs());
+        }
+
+        private void ClearClient_Button_Click(object sender, RoutedEventArgs e)
+        {
+            AddClient_Name_TextBox.Text = "";
+            AddClient_Phone_TextBox.Text = "";
+            AddClient_Fax_TextBox.Text = "";
+            AddClient_Email_TextBox.Text = "";
+            AddClient_Address_TextBox.Text = "";
+            AddClient_ContactName_TextBox.Text = "";
+        }
+
 
         #region GifMethods
         //Методы визуализации гифки "Ожидание загрузки"
-        void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            _source = GetSource();
-            LoadGif.Source = _source;
-            ImageAnimator.Animate(_bitmap, OnFrameChanged);
-        }
-        private void FrameUpdatedCallback()
-        {
-            ImageAnimator.UpdateFrames();
-            if (_source != null)
-                _source.Freeze();
-            _source = GetSource();
-            LoadGif.Source = _source;
-            InvalidateVisual();
-        }
-        private void OnFrameChanged(object sender, EventArgs e)
-        {
-            Dispatcher.BeginInvoke(DispatcherPriority.Normal,
-                                    new Action(FrameUpdatedCallback));
-        }
-        Bitmap _bitmap;
-        BitmapSource _source;
-        private BitmapSource GetSource()
-        {
-            if (_bitmap == null)
-            {
-                _bitmap = new Bitmap(@"load.gif");
-            }
-            IntPtr handle = IntPtr.Zero;
-            try
-            {
-                handle = _bitmap.GetHbitmap();
-            }
-            catch { }
-            return Imaging.CreateBitmapSourceFromHBitmap(
-                    handle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-        }
-        #endregion 
+        //void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        //{
+        //    _source = GetSource();
+        //    LoadGif.Source = _source;
+        //    ImageAnimator.Animate(_bitmap, OnFrameChanged);
+        //}
+        //private void FrameUpdatedCallback()
+        //{
+        //    ImageAnimator.UpdateFrames();
+        //    if (_source != null)
+        //        _source.Freeze();
+        //    _source = GetSource();
+        //    LoadGif.Source = _source;
+        //    InvalidateVisual();
+        //}
+        //private void OnFrameChanged(object sender, EventArgs e)
+        //{
+        //    Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+        //                            new Action(FrameUpdatedCallback));
+        //}
+        //Bitmap _bitmap;
+        //BitmapSource _source;
+        //private BitmapSource GetSource()
+        //{
+        //    if (_bitmap == null)
+        //    {
+        //        _bitmap = new Bitmap(@"load.gif");
+        //    }
+        //    IntPtr handle = IntPtr.Zero;
+        //    try
+        //    {
+        //        handle = _bitmap.GetHbitmap();
+        //    }
+        //    catch { }
+        //    return Imaging.CreateBitmapSourceFromHBitmap(
+        //            handle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+        //}
+        #endregion
+
+
     }
 }

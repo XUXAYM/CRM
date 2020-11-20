@@ -28,9 +28,7 @@ namespace GUI_DB.Models
                 OnPropetyChanged("IsDone");
             } 
         }
-
         public event PropertyChangedEventHandler PropertyChanged;
-
         protected virtual void OnPropetyChanged(string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

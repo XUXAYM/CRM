@@ -81,12 +81,12 @@
                 <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" Height="3" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                 <DataGrid x:Name="Clients_DataGrid" Grid.Row="3" Grid.Column="2" Margin="5" Visibility="Hidden" CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Организация" Binding="{Binding Path=Name}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Телефонный номер" Binding="{Binding Path=Phone}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Факс" Binding="{Binding Path=Fax}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Электронная почта" Binding="{Binding Path=Email}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Адрес" Binding="{Binding Path=Address}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Контактное лицо" Binding="{Binding Path=ContactName}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Организация" Binding="{Binding Path=Name}" IsReadOnly="True" SortDirection="Ascending"/>
+                        <DataGridTextColumn Header="Телефонный номер" Binding="{Binding Path=Phone, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
+                        <DataGridTextColumn Header="Факс" Binding="{Binding Path=Fax, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
+                        <DataGridTextColumn Header="Электронная почта" Binding="{Binding Path=Email, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
+                        <DataGridTextColumn Header="Адрес" Binding="{Binding Path=Address, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
+                        <DataGridTextColumn Header="Контактное лицо" Binding="{Binding Path=ContactName, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
                     </DataGrid.Columns>
                 </DataGrid>
                 <DataGrid x:Name="Workers_DataGrid" Grid.Row="3" Grid.Column="2" Margin="5" Visibility="Hidden" CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False">
@@ -99,7 +99,7 @@
                 <DataGrid x:Name="Tasks_DataGrid" Grid.Row="3" Grid.Column="2" Margin="5" Visibility="Visible" CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Задача" MinWidth="230" Binding="{Binding Path=Description}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Организация" Width="150" Binding="{Binding Path=Client}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Организация" Width="150" Binding="{Binding Path=Client}" IsReadOnly="True" SortDirection="Ascending"/>
                         <DataGridTextColumn Header="Приоритет" Width="150" Binding="{Binding Path=Priority}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Автор" Width="150" Binding="{Binding Path=Master}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Исполнитель" Width="150" Binding="{Binding Path=Slave}" IsReadOnly="True"/>
@@ -118,8 +118,8 @@
                         <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
                     <Button Content="Добавить задачу"  Width="250" x:Name="AddTask_Button" Grid.Column="0" Grid.Row="2" Click="AddTask_Button_Click"/>
-                    <Button Content="Очистить форму"  Width="250" x:Name="ClearForm_Button" Grid.Column="1" Grid.Row="2" Click="ClearForm_Button_Click"/>
-                    <ScrollViewer Grid.ColumnSpan="2" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,15">
+                    <Button Content="Очистить форму"  Width="250" x:Name="ClearForm_Button" Grid.Column="1" Grid.Row="2" Click="ClearForm_Button_Click" />
+                    <ScrollViewer Grid.ColumnSpan="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,15">
                         <Grid Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="0" Margin="10" HorizontalAlignment="Center" >
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
@@ -143,14 +143,56 @@
                             <Label Content="Исполнитель" Grid.Column="5" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="14"/>
                             <TextBox x:Name="AddTaskDescription_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="0" Grid.Row="2" TextWrapping="Wrap"/>
                             <ComboBox x:Name="AddTaskClient_ComboBox" Grid.Column="1" Grid.Row="2" MinWidth="100" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ></ComboBox>
-                            <TextBox x:Name="AddTaskSerial_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="2" Grid.Row="2"/>
-                            <TextBox x:Name="AddTaskDaysToComplete_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="3" Grid.Row="2"/>
+                            <TextBox x:Name="AddTaskSerial_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="2" Grid.Row="2" VerticalContentAlignment="Center"/>
+                            <TextBox x:Name="AddTaskDaysToComplete_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="3" Grid.Row="2" VerticalContentAlignment="Center"/>
                             <ComboBox x:Name="AddTaskPriority_ComboBox" Grid.Column="4" Grid.Row="2" MinWidth="100" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" >
                                 <ComboBoxItem Content="Низкий" Tag="low"/>
                                 <ComboBoxItem Content="Средний" Tag="middle"/>
                                 <ComboBoxItem Content="Высокий" Tag="high"/>
                             </ComboBox>
                             <ComboBox x:Name="AddTaskSlave_ComboBox"  Grid.Column="5" Grid.Row="2" MinWidth="100" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"></ComboBox>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+                <Grid Grid.Row="0" Margin="5" x:Name="AddClient_Grid" Height="150" Visibility="Hidden">
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition Height="30"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Button Content="Добавить клиента"  Width="250" x:Name="AddClient_Button" Grid.Column="0" Grid.Row="2" Click="AddClient_Button_Click"/>
+                    <Button Content="Очистить форму"  Width="250" x:Name="ClearClient_Button" Grid.Column="1" Grid.Row="2" Click="ClearClient_Button_Click"/>
+                    <ScrollViewer Grid.ColumnSpan="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,15">
+                        <Grid Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="0" Margin="10" HorizontalAlignment="Center" >
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition Height="auto"/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition MinWidth="150" Width="Auto"/>
+                                <ColumnDefinition MinWidth="100" Width="Auto"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition MinWidth="150"  Width="Auto"/>
+                                <ColumnDefinition MinWidth="110" Width="Auto"/>
+                                <ColumnDefinition MinWidth="100" Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border BorderThickness="1" Grid.ColumnSpan="11" Grid.Row="1" Margin="5,0" BorderBrush="#FFF0F0F0"/>
+                            <Label Content="Организация" Grid.Column="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="14"/>
+                            <Label Content="Телефон" Grid.Column="1" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="14"/>
+                            <Label Content="Факс" Grid.Column="2" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="14"/>
+                            <Label Content="Электронная почта" Grid.Column="3" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
+                            <Label Content="Адрес" Grid.Column="4" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="14"/>
+                            <Label Content="Контактное лицо" Grid.Column="5" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="14"/>
+                            <TextBox x:Name="AddClient_Name_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="0" Grid.Row="2" VerticalContentAlignment="Center"/>
+                            <TextBox x:Name="AddClient_Phone_TextBox" Grid.Column="1" Grid.Row="2" MinWidth="100" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ></TextBox>
+                            <TextBox x:Name="AddClient_Fax_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="2" Grid.Row="2" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
+                            <TextBox x:Name="AddClient_Email_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="3" Grid.Row="2" VerticalContentAlignment="Center" UseLayoutRounding="True"/>
+                            <TextBox x:Name="AddClient_Address_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="4" Grid.Row="2" VerticalContentAlignment="Center"/>
+                            <TextBox x:Name="AddClient_ContactName_TextBox" Width="auto" Height="auto" MinHeight="30" MinWidth="70" Grid.Column="5" Grid.Row="2" VerticalContentAlignment="Center"/>
                         </Grid>
                     </ScrollViewer>
                 </Grid>
