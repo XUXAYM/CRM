@@ -23,7 +23,7 @@ namespace GUI_DB.Models
             get { return _isCompleted; }
             set
             {
-                if (_isCompleted == value) return;
+                if (_isCompleted == value || _isCompleted == true) return;
                 _isCompleted = value;
                 OnPropetyChanged("IsDone");
             } 
