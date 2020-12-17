@@ -471,6 +471,11 @@ namespace GUI_DB
                 MessageBox.Show("Укажите колличество дней цифрами", "Ошибка формата данных", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+            if (Convert.ToInt32(AddTaskDaysToComplete_TextBox.Text) < 1)
+            {
+                MessageBox.Show("Укажите колличество дней больше 0", "Ошибка формата данных", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             LoadGif.Visibility = Visibility.Visible;
             WorkSheet.IsEnabled = false;
             ComboBoxItem boxItem = AddTaskPriority_ComboBox.SelectedItem as ComboBoxItem;

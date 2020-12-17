@@ -81,7 +81,7 @@
                 <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" Height="3" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                 <DataGrid x:Name="Clients_DataGrid" Grid.Row="3" Grid.Column="2" Margin="5" Visibility="Hidden" CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Организация" Binding="{Binding Path=Name}" IsReadOnly="True" SortDirection="Ascending"/>
+                        <DataGridTextColumn Header="Организация" Binding="{Binding Path=Name}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Телефонный номер" Binding="{Binding Path=Phone, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
                         <DataGridTextColumn Header="Факс" Binding="{Binding Path=Fax, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
                         <DataGridTextColumn Header="Электронная почта" Binding="{Binding Path=Email, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="False"/>
@@ -99,7 +99,7 @@
                 <DataGrid x:Name="Tasks_DataGrid" Grid.Row="3" Grid.Column="2" Margin="5" Visibility="Visible" CanUserAddRows="False" CanUserDeleteRows="False" AutoGenerateColumns="False">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Задача" MinWidth="230" Binding="{Binding Path=Description}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Организация" Width="150" Binding="{Binding Path=Client}" IsReadOnly="True" SortDirection="Ascending"/>
+                        <DataGridTextColumn Header="Организация" Width="150" Binding="{Binding Path=Client}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Приоритет" Width="150" Binding="{Binding Path=Priority}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Автор" Width="150" Binding="{Binding Path=Master}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Исполнитель" Width="150" Binding="{Binding Path=Slave}" IsReadOnly="True"/>
